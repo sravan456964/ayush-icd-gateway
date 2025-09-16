@@ -30,11 +30,11 @@ const App = () => (
             <main className="flex-1">
               <Routes>
                 <Route path="/" element={<Home />} />
-                /* <Route path="/about" element={<About />} /> */
+                {/* <Route path="/about" element={<About />} /> */}
                 <Route path="/features" element={<Features />} />
                 <Route path="/demo" element={<Demo />} />
-                /* <Route path="/docs" element={<Documentation />} /> */
-               /*  <Route path="/contact" element={<Contact />} />  */
+                {/* <Route path="/docs" element={<Documentation />} /> */}
+                {/*  <Route path="/contact" element={<Contact />} />  */}
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/logs" element={<Logs />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
