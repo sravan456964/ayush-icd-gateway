@@ -11,10 +11,10 @@ export const Navigation = () => {
 
   const navigation = [
     { name: "Home", href: "/", icon: FileText },
-    { name: "About", href: "/about", icon: Users },
+    // { name: "About", href: "/about", icon: Users },
     { name: "Features", href: "/features", icon: Zap },
     { name: "Demo", href: "/demo", icon: Play },
-    { name: "Documentation", href: "/docs", icon: Book },
+    // { name: "Documentation", href: "/docs", icon: Book },
     { name: "Contact", href: "/contact", icon: Mail },
     ...(user ? [{ name: "Logs", href: "/logs", icon: Activity }] : []),
   ];
