@@ -1,264 +1,324 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  Play, 
-  Download, 
-  ExternalLink, 
-  CheckCircle, 
-  ArrowRight,
-  Code,
-  Database
-} from "lucide-react";
+import { Search, Play, Database, Shield, Plus, UserPlus } from "lucide-react";
+import { useTermSearch } from "@/hooks/useTermSearch";
+import { usePatients } from "@/hooks/usePatients";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 export const Demo = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTerm, setSelectedTerm] = useState<any>(null);
+  const [patientName, setPatientName] = useState("");
+  const [patientAge, setPatientAge] = useState("");
+  const [diagnosis, setDiagnosis] = useState("");
+  
+  const { searchTerms, results, loading: searchLoading } = useTermSearch();
+  const { createPatient, fetchPatients, patients, loading: patientLoading } = usePatients();
+  const { user } = useAuth();
 
-  const mockResults = [
-    {
-      ayushTerm: "कफ दोष",
-      englishTerm: "Kapha Dosha",
-      icd11Code: "XA7J20",
-      icd11Description: "Disorders of constitutional type - Kapha predominant",
-      confidence: 95,
-      category: "Constitutional Disorders"
-    },
-    {
-      ayushTerm: "अमलपित्त",
-      englishTerm: "Amlapitta",
-      icd11Code: "DA60.0",
-      icd11Description: "Gastro-oesophageal reflux disease",
-      confidence: 88,
-      category: "Digestive Disorders"
-    },
-    {
-      ayushTerm: "प्राणवायु",
-      englishTerm: "Prana Vayu", 
-      icd11Code: "MD11.0",
-      icd11Description: "Disorders of respiratory function",
-      confidence: 82,
-      category: "Respiratory System"
+  useEffect(() => {
+    if (user) {
+      fetchPatients();
     }
-  ];
+  }, [user]);
 
-  const handleSearch = () => {
-    setIsSearching(true);
-    setTimeout(() => {
-      setIsSearching(false);
-    }, 1500);
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (searchQuery) {
+        searchTerms(searchQuery);
+      }
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
+
+  const handleSelectTerm = (term: any) => {
+    setSelectedTerm(term);
+    setDiagnosis(term.local_name);
   };
 
-  return (
-    <div className="min-h-screen py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-6">
-            Interactive Demo
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-            Experience the power of our Ayush ↔ ICD-11 integration platform. 
-            Try searching for Ayurvedic terms and see real-time mappings to international standards.
-          </p>
-        </div>
+  const handleSavePatient = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to save patient records",
+        variant: "destructive"
+      });
+      return;
+    }
 
-        {/* Demo Interface */}
-        <section className="mb-20">
-          <Card className="max-w-4xl mx-auto border-border shadow-card">
-            <CardHeader className="text-center bg-gradient-subtle">
-              <CardTitle className="text-2xl flex items-center justify-center gap-2">
-                <Search className="w-6 h-6 text-primary" />
-                Ayush Terminology Search
-              </CardTitle>
-              <p className="text-muted-foreground">
-                Enter an Ayurvedic term in Hindi, Sanskrit, or English
-              </p>
+    if (!patientName || !patientAge || !selectedTerm) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill all fields and select a term",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const { data, error } = await createPatient({
+      name: patientName,
+      age: parseInt(patientAge),
+      diagnosis,
+      namaste_code: selectedTerm.namaste_code,
+      icd_code: selectedTerm.icd_code
+    });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save patient record",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Patient record saved successfully"
+      });
+      // Reset form
+      setPatientName("");
+      setPatientAge("");
+      setDiagnosis("");
+      setSelectedTerm(null);
+      fetchPatients();
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <Card>
+            <CardHeader>
+              <CardTitle>Authentication Required</CardTitle>
+              <CardDescription>
+                Please sign in to access the interactive demo
+              </CardDescription>
             </CardHeader>
-            <CardContent className="p-8">
-              <div className="space-y-6">
-                {/* Search Input */}
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Try: कफ दोष, Amlapitta, or Prana Vayu..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="text-lg h-12"
-                    />
-                  </div>
-                  <Button 
-                    size="lg" 
-                    onClick={handleSearch}
-                    disabled={isSearching}
-                    className="px-8"
-                  >
-                    {isSearching ? "Searching..." : "Search"}
-                    <Search className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
+            <CardContent>
+              <Link to="/auth">
+                <Button>Sign In</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
-                {/* Mock Results */}
-                {(searchTerm || isSearching) && (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      Search Results ({mockResults.length} matches found)
-                    </h3>
-                    <div className="space-y-3">
-                      {mockResults.map((result, index) => (
-                        <div 
-                          key={index} 
-                          className="border border-border rounded-lg p-4 hover:shadow-card transition-all duration-200 bg-card"
-                        >
-                          <div className="grid md:grid-cols-3 gap-4 items-center">
-                            <div>
-                              <div className="text-lg font-medium text-foreground">
-                                {result.ayushTerm}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {result.englishTerm}
-                              </div>
-                              <Badge variant="outline" className="mt-1">
-                                {result.category}
-                              </Badge>
-                            </div>
-                            
-                            <div className="flex items-center justify-center">
-                              <ArrowRight className="w-6 h-6 text-primary" />
-                            </div>
-                            
-                            <div>
-                              <div className="font-mono text-sm text-government font-medium">
-                                ICD-11: {result.icd11Code}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {result.icd11Description}
-                              </div>
-                              <div className="flex items-center mt-2">
-                                <CheckCircle className="w-4 h-4 text-secondary mr-1" />
-                                <span className="text-xs text-secondary font-medium">
-                                  {result.confidence}% confidence
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-12 text-center">
+        <h1 className="text-4xl font-bold text-primary mb-4">
+          Interactive Demo
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          Experience real-time NAMASTE to ICD-11 mapping with our live demonstration platform
+        </p>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8 mb-12">
+        {/* Live Search Demo */}
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-primary" />
+              Live Search Interface
+            </CardTitle>
+            <CardDescription>
+              Type any Ayurvedic term to see ICD-11 mappings in real-time
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="relative">
+              <Input
+                placeholder="Try typing: Jwara, Prameha, Kasa..."
+                className="pr-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+            </div>
+            
+            {/* Search Results */}
+            <div className="space-y-3 bg-secondary/30 p-4 rounded-lg max-h-80 overflow-y-auto">
+              {searchLoading ? (
+                <div className="text-center text-muted-foreground">Searching...</div>
+              ) : results.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium text-muted-foreground">Search Results:</div>
+                  {results.map((term) => (
+                    <div 
+                      key={term.id}
+                      className="flex items-center justify-between p-2 bg-background rounded border cursor-pointer hover:bg-secondary/50"
+                      onClick={() => handleSelectTerm(term)}
+                    >
+                      <div>
+                        <div className="font-medium">{term.local_name}</div>
+                        <div className="text-sm text-muted-foreground">{term.description}</div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline">{term.namaste_code}</Badge>
+                        <Badge className="ml-2">{term.icd_code}</Badge>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              ) : searchQuery ? (
+                <div className="text-center text-muted-foreground">No results found</div>
+              ) : (
+                <div className="text-sm text-muted-foreground">Start typing to search for terms...</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Patient Record Demo */}
+        <Card className="border-secondary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-secondary" />
+              Patient Record System
+            </CardTitle>
+            <CardDescription>
+              Save diagnoses with dual NAMASTE + ICD-11 coding for EMR integration
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Input 
+                placeholder="Patient Name" 
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+              />
+              <Input 
+                placeholder="Age" 
+                type="number" 
+                value={patientAge}
+                onChange={(e) => setPatientAge(e.target.value)}
+              />
+            </div>
+            <Input 
+              placeholder="Diagnosis" 
+              value={diagnosis}
+              onChange={(e) => setDiagnosis(e.target.value)}
+            />
+            
+            {selectedTerm && (
+              <div className="bg-secondary/30 p-4 rounded-lg">
+                <div className="text-sm font-medium text-muted-foreground mb-2">Selected Mapping:</div>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="font-medium">{selectedTerm.local_name} → {diagnosis}</div>
+                    <div className="text-sm text-muted-foreground">FHIR-compliant record ready</div>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Video Demo Section */}
-        <section className="mb-20">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">
-              Watch Our Platform in Action
-            </h2>
-            <p className="text-xl text-muted-foreground">
-              See how healthcare professionals can seamlessly integrate traditional 
-              Ayurvedic diagnoses with modern EHR systems
-            </p>
-          </div>
-          
-          <Card className="max-w-4xl mx-auto border-border">
-            <CardContent className="p-0">
-              <div className="aspect-video bg-gradient-government rounded-t-lg flex items-center justify-center">
-                <div className="text-center text-government-foreground">
-                  <Play className="w-16 h-16 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">
-                    Platform Walkthrough
-                  </h3>
-                  <p className="text-government-foreground/80">
-                    3-minute demonstration video
-                  </p>
-                  <Button 
-                    variant="secondary" 
-                    size="lg" 
-                    className="mt-4 bg-background text-foreground hover:bg-muted"
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Play Demo Video
-                  </Button>
+                  <div>
+                    <Badge variant="outline">{selectedTerm.namaste_code}</Badge>
+                    <Badge className="ml-2">{selectedTerm.icd_code}</Badge>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </section>
+            )}
+            
+            <Button 
+              className="w-full" 
+              onClick={handleSavePatient}
+              disabled={patientLoading || !selectedTerm || !patientName || !patientAge}
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              {patientLoading ? "Saving..." : "Save Patient Record"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Try Sandbox */}
-        <section>
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">
-              Developer Resources
-            </h2>
-            <p className="text-xl text-muted-foreground">
-              Explore our API and integrate with your healthcare systems
+      {/* Saved Patients */}
+      {patients.length > 0 && (
+        <Card className="mb-12">
+          <CardHeader>
+            <CardTitle>Recent Patient Records</CardTitle>
+            <CardDescription>
+              Your saved patient records with dual coding
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {patients.slice(0, 5).map((patient) => (
+                <div key={patient.id} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+                  <div>
+                    <div className="font-medium">{patient.name} ({patient.age} years)</div>
+                    <div className="text-sm text-muted-foreground">{patient.diagnosis}</div>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant="outline">{patient.namaste_code}</Badge>
+                    <Badge className="ml-2">{patient.icd_code}</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Video Demo Section */}
+      <Card className="mb-12">
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center gap-2">
+            <Play className="h-5 w-5" />
+            Platform Walkthrough
+          </CardTitle>
+          <CardDescription>
+            Watch our comprehensive demonstration of the integration platform
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="aspect-video bg-secondary/30 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <Play className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Demo video will be embedded here</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Showing real-time API integration with EMR systems
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Live Sandbox */}
+      <div className="text-center">
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Try Live Sandbox
+            </CardTitle>
+            <CardDescription>
+              Access our development environment with real API endpoints
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Test the complete integration with sample data in a secure environment
             </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="border-border hover:shadow-card transition-all duration-300 text-center">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                  <Code className="w-6 h-6 text-primary" />
-                </div>
-                <CardTitle>API Sandbox</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-6">
-                  Test our APIs directly in your browser with live data and examples
-                </p>
-                <Button variant="outline" className="w-full">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Open Sandbox
+            <div className="flex gap-4 justify-center">
+              <Link to="/logs">
+                <Button size="lg">
+                  View Audit Logs
                 </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border hover:shadow-card transition-all duration-300 text-center">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mb-4">
-                  <Database className="w-6 h-6 text-secondary" />
-                </div>
-                <CardTitle>Sample Data</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-6">
-                  Download sample datasets and mapping files for testing
-                </p>
-                <Button variant="outline" className="w-full">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Samples
+              </Link>
+              <Link to="/docs">
+                <Button variant="outline" size="lg">
+                  View API Docs
                 </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border hover:shadow-card transition-all duration-300 text-center">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-government/10 rounded-lg flex items-center justify-center mb-4">
-                  <ExternalLink className="w-6 h-6 text-government" />
-                </div>
-                <CardTitle>GitHub Repository</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-6">
-                  Access source code, documentation, and contribution guidelines
-                </p>
-                <Button variant="government" className="w-full">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View on GitHub
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

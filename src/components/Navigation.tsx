@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, FileText, Users, Zap, Play, Book, Mail } from "lucide-react";
+import { Menu, X, FileText, Users, Zap, Play, Book, Mail, LogIn, LogOut, Activity } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   const navigation = [
     { name: "Home", href: "/", icon: FileText },
@@ -14,6 +16,7 @@ export const Navigation = () => {
     { name: "Demo", href: "/demo", icon: Play },
     { name: "Documentation", href: "/docs", icon: Book },
     { name: "Contact", href: "/contact", icon: Mail },
+    ...(user ? [{ name: "Logs", href: "/logs", icon: Activity }] : []),
   ];
 
   const isActive = (path: string) => {
@@ -61,9 +64,33 @@ export const Navigation = () => {
 
           {/* CTA Button */}
           <div className="hidden md:block">
-            <Button variant="government" size="sm">
-              Try Demo
-            </Button>
+            {user ? (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">
+                  {user.email}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={signOut}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Link to="/auth">
+                  <Button variant="outline" size="sm" className="mr-2">
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Button>
+                </Link>
+                <Button variant="government" size="sm">
+                  <Link to="/demo">Try Demo</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -102,9 +129,29 @@ export const Navigation = () => {
               );
             })}
             <div className="px-3 py-2">
-              <Button variant="government" size="sm" className="w-full">
-                Try Demo
-              </Button>
+              {user ? (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={signOut}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              ) : (
+                <>
+                  <Link to="/auth" className="block mb-2">
+                    <Button variant="outline" size="sm" className="w-full">
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Button variant="government" size="sm" className="w-full">
+                    <Link to="/demo">Try Demo</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
